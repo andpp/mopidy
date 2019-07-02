@@ -26,6 +26,10 @@ _CORE_EVENTS_TO_IDLE_SUBSYSTEMS = {
     'mute_changed': 'output',
     'seeked': 'player',
     'stream_title_changed': 'playlist',
+    'sleeptimer_started': None,
+    'sleeptimer_expired': None,
+    'sleeptimer_tick': None,
+    'sleeptimer_cancelled': None,
 }
 
 
