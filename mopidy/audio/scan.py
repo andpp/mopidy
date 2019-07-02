@@ -10,6 +10,9 @@ from mopidy.audio import tags as tags_lib, utils
 from mopidy.internal import encoding, log
 from mopidy.internal.gi import Gst, GstPbutils
 
+from mopidy.audio.tinytag import TinyTag
+from urllib import unquote
+
 # GST_ELEMENT_FACTORY_LIST:
 _DECODER = 1 << 0
 _AUDIO = 1 << 50
@@ -47,21 +50,70 @@ class Scanner(object):
         self._proxy_config = proxy_config or {}
 
     def scan(self, uri, timeout=None):
-        """
-        Scan the given uri collecting relevant metadata.
+      """
+      Scan the given uri collecting relevant metadata.
 
-        :param uri: URI of the resource to scan.
-        :type uri: string
-        :param timeout: timeout for scanning a URI in ms. Defaults to the
-            ``timeout`` value used when creating the scanner.
-        :type timeout: int
-        :return: A named tuple containing
-            ``(uri, tags, duration, seekable, mime)``.
-            ``tags`` is a dictionary of lists for all the tags we found.
-            ``duration`` is the length of the URI in milliseconds, or
-            :class:`None` if the URI has no duration. ``seekable`` is boolean.
-            indicating if a seek would succeed.
-        """
+      :param uri: URI of the resource to scan.
+      :type uri: string
+      :param timeout: timeout for scanning a URI in ms. Defaults to the
+          ``timeout`` value used when creating the scanner.
+      :type timeout: int
+      :return: A named tuple containing
+          ``(uri, tags, duration, seekable, mime)``.
+          ``tags`` is a dictionary of lists for all the tags we found.
+          ``duration`` is the length of the URI in milliseconds, or
+          :class:`None` if the URI has no duration. ``seekable`` is boolean.
+          indicating if a seek would succeed.
+      """
+      if uri[:4] == 'file':
+            duration, seekable, mime = None, None, None
+            tags = {}
+
+            try:
+                fname = unquote(uri[7:]).encode('raw_unicode_escape').decode('utf-8')
+                supported = False
+                extensions = ['.mp3', '.oga', '.ogg', '.opus', '.wav', '.flac', '.wma', '.m4b', '.m4a', '.mp4']
+                for fileextension in extensions:
+                   if fname.lower().endswith(fileextension):
+                       supported = True
+                       break
+                if supported:
+                    tag = TinyTag.get(fname, image=False)
+                    if tag.album:        tags['album'] =       tag.album.rstrip('\0')               # album as string
+                    if tag.albumartist:  tags['albumartist'] = tag.albumartist.rstrip('\0')   # album artist as string
+                    if tag.artist:       tags['artist'] =      tag.artist.rstrip('\0')             # artist name as string
+                    #if tag.audio_offset  # number of bytes before audio data begins
+                    if tag.bitrate:      tags['bitrate'] =     int(tag.bitrate)       # bitrate in kBits/s
+                    if tag.disc:         tags['disc'] =        int(tag.disc.rstrip('\0'))         # disk number in album
+                    if tag.disc_total:   tags['disc_total'] =  int(tag.disc_total.rstrip('\0')) # the total number of discs
+                    duration=int(float(tag.duration) * 1000)      # duration of the song in seconds
+                    #if tag.filesize      # file size in bytes
+                    if tag.genre:        tags['genre'] =       tag.genre.rstrip('\0')          # genre as string
+                    #if tag.samplerate    # samples per second
+                    if tag.title:        tags['title'] =       tag.title.rstrip('\0')          # title of the song
+                    if tag.track:        tags['track'] =       int(tag.track.rstrip('\0'))         # track number as string
+                    if tag.track_total:  tags['track_total'] = int(tag.track_total.rstrip('\0')) # total number of tracks as string
+                    if tag.composer:     tags['composer'] =    tag.composer.rstrip('\0')
+                    #try:
+                    #    image_data = tag.get_image()
+                    #except IOError:
+                    #    pass
+                    #if image_data:
+                    #    tags['image'] =  image_data
+                    #if tag.year          # year or data as string
+
+                    have_audio =  duration > 0
+                    seekable = True
+                else: # not supported
+                    duration = 0
+                    have_audio = 0
+                    seekable = False
+            finally:
+                pass
+
+            return _Result(uri, tags, duration, seekable, mime, have_audio)
+      else:
+
         timeout = int(timeout or self._timeout_ms)
         tags, duration, seekable, mime = None, None, None, None
         pipeline, signals = _setup_pipeline(uri, self._proxy_config)

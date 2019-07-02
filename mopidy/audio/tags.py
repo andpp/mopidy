@@ -81,61 +81,96 @@ def _extract_sample_data(sample):
 # TODO: split based on "stream" and "track" based conversion? i.e. handle data
 # from radios in it's own helper instead?
 def convert_tags_to_track(tags):
-    """Convert our normalized tags to a track.
+   """Convert our normalized tags to a track.
 
-    :param  tags: dictionary of tag keys with a list of values
-    :type tags: :class:`dict`
-    :rtype: :class:`mopidy.models.Track`
-    """
-    album_kwargs = {}
-    track_kwargs = {}
+   :param  tags: dictionary of tag keys with a list of values
+   :type tags: :class:`dict`
+   :rtype: :class:`mopidy.models.Track`
+   """
+   album_kwargs = {}
+   track_kwargs = {}
 
-    track_kwargs['composers'] = _artists(tags, Gst.TAG_COMPOSER)
-    track_kwargs['performers'] = _artists(tags, Gst.TAG_PERFORMER)
-    track_kwargs['artists'] = _artists(tags, Gst.TAG_ARTIST,
+   try:
+       track_kwargs['composers'] = _artists(tags, Gst.TAG_COMPOSER)
+       track_kwargs['performers'] = _artists(tags, Gst.TAG_PERFORMER)
+       track_kwargs['artists'] = _artists(tags, Gst.TAG_ARTIST,
                                        'musicbrainz-artistid',
                                        'musicbrainz-sortname')
-    album_kwargs['artists'] = _artists(
-        tags, Gst.TAG_ALBUM_ARTIST, 'musicbrainz-albumartistid')
+       album_kwargs['artists'] = _artists(
+           tags, Gst.TAG_ALBUM_ARTIST, 'musicbrainz-albumartistid')
 
-    track_kwargs['genre'] = '; '.join(tags.get(Gst.TAG_GENRE, []))
-    track_kwargs['name'] = '; '.join(tags.get(Gst.TAG_TITLE, []))
-    if not track_kwargs['name']:
-        track_kwargs['name'] = '; '.join(tags.get(Gst.TAG_ORGANIZATION, []))
+       track_kwargs['genre'] = '; '.join(tags.get(Gst.TAG_GENRE, []))
+       track_kwargs['name'] = '; '.join(tags.get(Gst.TAG_TITLE, []))
+       if not track_kwargs['name']:
+           track_kwargs['name'] = '; '.join(tags.get(Gst.TAG_ORGANIZATION, []))
 
-    track_kwargs['comment'] = '; '.join(tags.get('comment', []))
-    if not track_kwargs['comment']:
-        track_kwargs['comment'] = '; '.join(tags.get(Gst.TAG_LOCATION, []))
-    if not track_kwargs['comment']:
-        track_kwargs['comment'] = '; '.join(tags.get(Gst.TAG_COPYRIGHT, []))
+       track_kwargs['comment'] = '; '.join(tags.get('comment', []))
+       if not track_kwargs['comment']:
+           track_kwargs['comment'] = '; '.join(tags.get(Gst.TAG_LOCATION, []))
+       if not track_kwargs['comment']:
+           track_kwargs['comment'] = '; '.join(tags.get(Gst.TAG_COPYRIGHT, []))
 
-    track_kwargs['track_no'] = tags.get(Gst.TAG_TRACK_NUMBER, [None])[0]
-    track_kwargs['disc_no'] = tags.get(Gst.TAG_ALBUM_VOLUME_NUMBER, [None])[0]
-    track_kwargs['bitrate'] = tags.get(Gst.TAG_BITRATE, [None])[0]
-    track_kwargs['musicbrainz_id'] = tags.get('musicbrainz-trackid', [None])[0]
+       track_kwargs['track_no'] = tags.get(Gst.TAG_TRACK_NUMBER, [None])[0]
+       track_kwargs['disc_no'] = tags.get(Gst.TAG_ALBUM_VOLUME_NUMBER, [None])[0]
+       track_kwargs['bitrate'] = tags.get(Gst.TAG_BITRATE, [None])[0]
+       track_kwargs['musicbrainz_id'] = tags.get('musicbrainz-trackid', [None])[0]
 
-    album_kwargs['name'] = tags.get(Gst.TAG_ALBUM, [None])[0]
-    album_kwargs['num_tracks'] = tags.get(Gst.TAG_TRACK_COUNT, [None])[0]
-    album_kwargs['num_discs'] = tags.get(Gst.TAG_ALBUM_VOLUME_COUNT, [None])[0]
-    album_kwargs['musicbrainz_id'] = tags.get('musicbrainz-albumid', [None])[0]
+       album_kwargs['name'] = tags.get(Gst.TAG_ALBUM, [None])[0]
+       album_kwargs['num_tracks'] = tags.get(Gst.TAG_TRACK_COUNT, [None])[0]
+       album_kwargs['num_discs'] = tags.get(Gst.TAG_ALBUM_VOLUME_COUNT, [None])[0]
+       album_kwargs['musicbrainz_id'] = tags.get('musicbrainz-albumid', [None])[0]
 
-    album_kwargs['date'] = tags.get(Gst.TAG_DATE, [None])[0]
-    if not album_kwargs['date']:
-        datetime = tags.get(Gst.TAG_DATE_TIME, [None])[0]
-        if datetime is not None:
-            album_kwargs['date'] = datetime.split('T')[0]
-    track_kwargs['date'] = album_kwargs['date']
+       album_kwargs['date'] = tags.get(Gst.TAG_DATE, [None])[0]
+       if not album_kwargs['date']:
+           datetime = tags.get(Gst.TAG_DATE_TIME, [None])[0]
+           if datetime is not None:
+               album_kwargs['date'] = datetime.split('T')[0]
+       track_kwargs['date'] = album_kwargs['date']
 
-    # Clear out any empty values we found
-    track_kwargs = {k: v for k, v in track_kwargs.items() if v}
-    album_kwargs = {k: v for k, v in album_kwargs.items() if v}
+       # Clear out any empty values we found
+       track_kwargs = {k: v for k, v in track_kwargs.items() if v}
+       album_kwargs = {k: v for k, v in album_kwargs.items() if v}
 
-    # Only bother with album if we have a name to show.
-    if album_kwargs.get('name'):
-        track_kwargs['album'] = Album(**album_kwargs)
+       # Only bother with album if we have a name to show.
+       if album_kwargs.get('name'):
+           track_kwargs['album'] = Album(**album_kwargs)
 
-    return Track(**track_kwargs)
+   except:
 
+       if 'title' in tags: track_kwargs['name'] = tags['title']
+       if 'genre' in tags: track_kwargs['genre'] = tags['genre']
+       if 'track' in tags: track_kwargs['track_no'] = tags['track']
+       if 'bitrate' in tags: track_kwargs['bitrate'] = tags['bitrate']
+       if 'artist' in tags:
+           album_kwargs['artists'] = [Artist({'name': tags['artist']})]
+       if 'album' in tags: album_kwargs['name'] =  tags['album']
+       # Clear out any empty values we found
+
+       if 'composer' in tags:
+           track_kwargs['composers'] = [Artist({'name': tags['composer']})]
+       if 'disc' in tags: track_kwargs['disc_no'] = tags['disc']
+       if 'disc_total' in tags: album_kwargs['num_discs'] = tags['disc_total']
+       if 'track_total' in tags: album_kwargs['num_tracks'] = tags['track_total']
+       #if 'image' in tags: track_kwargs['image'] = tags['image']
+
+       track_kwargs = {k: v for k, v in track_kwargs.items() if v}
+       album_kwargs = {k: v for k, v in album_kwargs.items() if v}
+
+       # Only bother with album if we have a name to show.
+       if album_kwargs.get('name'):
+           track_kwargs['album'] = Album(**album_kwargs)
+
+       #if 'album' in tags:
+       #    track_kwargs['album'] = Album(name=tags['album'])
+
+       if 'artist' in tags:
+           track_kwargs['artists'] = [Artist(name=tags['artist'])]
+
+       #for i in track_kwargs:
+       #    if not i == 'image' : print(i, track_kwargs[i])
+
+   finally:
+       return Track(**track_kwargs)
 
 def _artists(tags, artist_name, artist_id=None, artist_sortname=None):
     # Name missing, don't set artist
