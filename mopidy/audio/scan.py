@@ -13,6 +13,8 @@ from mopidy.internal.gi import Gst, GstPbutils
 from mopidy.audio.tinytag import TinyTag
 from urllib import unquote
 
+import taglib
+
 # GST_ELEMENT_FACTORY_LIST:
 _DECODER = 1 << 0
 _AUDIO = 1 << 50
@@ -71,7 +73,7 @@ class Scanner(object):
             tags = {}
 
             try:
-                tags['tinytag'] = True
+                tags['tagtype'] = 'TinyTags'
                 fname = unquote(uri[7:]).encode('raw_unicode_escape').decode('utf-8')
                 supported = False
                 extensions = ['.mp3', '.oga', '.ogg', '.opus', '.wav', '.flac', '.wma', '.m4b', '.m4a', '.mp4']
@@ -80,6 +82,7 @@ class Scanner(object):
                        supported = True
                        break
                 if supported:
+                    '''
                     tag = TinyTag.get(fname, image=False)
                     if tag.album:        tags['album'] =       tag.album.rstrip('\0')            # album as string
                     if tag.albumartist:  tags['albumartist'] = tag.albumartist.rstrip('\0')      # album artist as string
@@ -100,6 +103,14 @@ class Scanner(object):
                     #if image_data:
                     #    tags['image'] =  image_data
                     #if tag.year          # year or data as string
+                    '''
+
+                    track = taglib.File(fname)
+                    tags = track.tags
+                    tags['tagtype'] = 'TagLib'
+                    #print(track.tags)
+                    #print(track.length)
+                    duration = int(track.length * 1000)
 
                     have_audio =  duration > 0
                     seekable = True

@@ -90,7 +90,7 @@ def convert_tags_to_track(tags):
    album_kwargs = {}
    track_kwargs = {}
 
-   if not 'tinytag' in tags:
+   if not 'tagtype' in tags:
        # Using tags from gstreamer
        track_kwargs['composers'] = _artists(tags, Gst.TAG_COMPOSER)
        track_kwargs['performers'] = _artists(tags, Gst.TAG_PERFORMER)
@@ -136,7 +136,7 @@ def convert_tags_to_track(tags):
        if album_kwargs.get('name'):
            track_kwargs['album'] = Album(**album_kwargs)
 
-   else:
+   elif tags['tagtype'] == 'TinyTags':
        # Using tags from TinyTags
        if 'title' in tags: track_kwargs['name'] = tags['title']
        if 'genre' in tags: track_kwargs['genre'] = tags['genre']
@@ -163,6 +163,34 @@ def convert_tags_to_track(tags):
 
        if 'artist' in tags:
            track_kwargs['artists'] = [Artist(name=tags['artist'])]
+   elif tags['tagtype'] == 'TagLib':
+       # Using tags from TinyTags
+       if 'TITLE' in tags: track_kwargs['name'] = '; '.join(tags['TITLE'])
+       if 'GENGE' in tags: track_kwargs['genre'] = '; '.join(tags['GENRE'])
+       #if 'track' in tags: track_kwargs['track_no'] = tags['track']
+       #if 'bitrate' in tags: track_kwargs['bitrate'] = tags['bitrate']
+       if 'ARTIST' in tags:
+           album_kwargs['artists'] = [Artist(name=name) for name in tags['ARTIST']]  #[Artist({'name': tags['artist']})]
+       if 'ALBUM' in tags: album_kwargs['name'] =  ' '.join(tags['ALBUM'])
+       # Clear out any empty values we found
+
+       if 'composer' in tags:
+           track_kwargs['composers'] = [Artist({'name': tags['composer']})]
+       if 'disc' in tags: track_kwargs['disc_no'] = tags['disc']
+       if 'disc_total' in tags: album_kwargs['num_discs'] = tags['disc_total']
+       if 'track_total' in tags: album_kwargs['num_tracks'] = tags['track_total']
+       #if 'image' in tags: track_kwargs['image'] = tags['image']
+
+       track_kwargs = {k: v for k, v in track_kwargs.items() if v}
+       album_kwargs = {k: v for k, v in album_kwargs.items() if v}
+
+       # Only bother with album if we have a name to show.
+       if album_kwargs.get('name'):
+           track_kwargs['album'] = Album(**album_kwargs)
+
+       if 'artist' in tags:
+           track_kwargs['artists'] = [Artist(name=tags['artist'])]
+
 
    return Track(**track_kwargs)
 
