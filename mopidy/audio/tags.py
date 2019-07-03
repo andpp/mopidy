@@ -90,7 +90,8 @@ def convert_tags_to_track(tags):
    album_kwargs = {}
    track_kwargs = {}
 
-   try:
+   if not 'tinytag' in tags:
+       # Using tags from gstreamer
        track_kwargs['composers'] = _artists(tags, Gst.TAG_COMPOSER)
        track_kwargs['performers'] = _artists(tags, Gst.TAG_PERFORMER)
        track_kwargs['artists'] = _artists(tags, Gst.TAG_ARTIST,
@@ -135,8 +136,8 @@ def convert_tags_to_track(tags):
        if album_kwargs.get('name'):
            track_kwargs['album'] = Album(**album_kwargs)
 
-   except:
-
+   else:
+       # Using tags from TinyTags
        if 'title' in tags: track_kwargs['name'] = tags['title']
        if 'genre' in tags: track_kwargs['genre'] = tags['genre']
        if 'track' in tags: track_kwargs['track_no'] = tags['track']
@@ -160,17 +161,10 @@ def convert_tags_to_track(tags):
        if album_kwargs.get('name'):
            track_kwargs['album'] = Album(**album_kwargs)
 
-       #if 'album' in tags:
-       #    track_kwargs['album'] = Album(name=tags['album'])
-
        if 'artist' in tags:
            track_kwargs['artists'] = [Artist(name=tags['artist'])]
 
-       #for i in track_kwargs:
-       #    if not i == 'image' : print(i, track_kwargs[i])
-
-   finally:
-       return Track(**track_kwargs)
+   return Track(**track_kwargs)
 
 def _artists(tags, artist_name, artist_id=None, artist_sortname=None):
     # Name missing, don't set artist

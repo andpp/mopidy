@@ -67,9 +67,11 @@ class Scanner(object):
       """
       if uri[:4] == 'file':
             duration, seekable, mime = None, None, None
+            have_audio = False
             tags = {}
 
             try:
+                tags['tinytag'] = True
                 fname = unquote(uri[7:]).encode('raw_unicode_escape').decode('utf-8')
                 supported = False
                 extensions = ['.mp3', '.oga', '.ogg', '.opus', '.wav', '.flac', '.wma', '.m4b', '.m4a', '.mp4']
@@ -79,19 +81,16 @@ class Scanner(object):
                        break
                 if supported:
                     tag = TinyTag.get(fname, image=False)
-                    if tag.album:        tags['album'] =       tag.album.rstrip('\0')               # album as string
-                    if tag.albumartist:  tags['albumartist'] = tag.albumartist.rstrip('\0')   # album artist as string
-                    if tag.artist:       tags['artist'] =      tag.artist.rstrip('\0')             # artist name as string
-                    #if tag.audio_offset  # number of bytes before audio data begins
-                    if tag.bitrate:      tags['bitrate'] =     int(tag.bitrate)       # bitrate in kBits/s
-                    if tag.disc:         tags['disc'] =        int(tag.disc.rstrip('\0'))         # disk number in album
-                    if tag.disc_total:   tags['disc_total'] =  int(tag.disc_total.rstrip('\0')) # the total number of discs
-                    duration=int(float(tag.duration) * 1000)      # duration of the song in seconds
-                    #if tag.filesize      # file size in bytes
-                    if tag.genre:        tags['genre'] =       tag.genre.rstrip('\0')          # genre as string
-                    #if tag.samplerate    # samples per second
-                    if tag.title:        tags['title'] =       tag.title.rstrip('\0')          # title of the song
-                    if tag.track:        tags['track'] =       int(tag.track.rstrip('\0'))         # track number as string
+                    if tag.album:        tags['album'] =       tag.album.rstrip('\0')            # album as string
+                    if tag.albumartist:  tags['albumartist'] = tag.albumartist.rstrip('\0')      # album artist as string
+                    if tag.artist:       tags['artist'] =      tag.artist.rstrip('\0')           # artist name as string
+                    if tag.bitrate:      tags['bitrate'] =     int(tag.bitrate)                  # bitrate in kBits/s
+                    if tag.disc:         tags['disc'] =        int(tag.disc.rstrip('\0'))        # disk number in album
+                    if tag.disc_total:   tags['disc_total'] =  int(tag.disc_total.rstrip('\0'))  # the total number of discs
+                    duration = int(float(tag.duration) * 1000)      # duration of the song in seconds
+                    if tag.genre:        tags['genre'] =       tag.genre.rstrip('\0')            # genre as string
+                    if tag.title:        tags['title'] =       tag.title.rstrip('\0')            # title of the song
+                    if tag.track:        tags['track'] =       int(tag.track.rstrip('\0'))       # track number as string
                     if tag.track_total:  tags['track_total'] = int(tag.track_total.rstrip('\0')) # total number of tracks as string
                     if tag.composer:     tags['composer'] =    tag.composer.rstrip('\0')
                     #try:
